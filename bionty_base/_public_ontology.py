@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from lamin_utils import logger
 from lamin_utils._lookup import Lookup
+from botocore.exceptions import ClientError
 
 from ._ontology import Ontology
 from ._settings import check_datasetdir_exists, check_dynamicdir_exists, settings
@@ -300,11 +301,16 @@ class PublicOntology:
         if self._parquet_filename is None:
             self._url_download(self._url, self._local_parquet_path)
         else:
-            s3_bionty_assets(
-                filename=self._parquet_filename,
-                assets_base_url="s3://bionty-assets",
-                localpath=self._local_parquet_path,
-            )
+            try:
+                s3_bionty_assets(
+                    filename=self._parquet_filename,
+                    assets_base_url="s3://bionty-assets",
+                    localpath=self._local_parquet_path,
+                )
+            except ClientError:
+                logger.warning(
+                    f"Could not find {self._parquet_filename} in s3://bionty-assets."
+                )
         # If download is not possible, write a parquet file of the ontology df
         if not self._url.endswith("parquet"):
             if not self._local_parquet_path.exists():
